@@ -34,7 +34,7 @@ const addHouse = async (req, res) => {
             }
 
             // Check if the owner already has a house
-            const existingHouse = await houseModel.findOne({ ownerName: owner._id });
+            const existingHouse = await houseModel.findOne({ owner: owner._id });
             if (existingHouse) {
                 return res.status(400).json({ message: "One owner can have only one house" });
             }
@@ -43,7 +43,7 @@ const addHouse = async (req, res) => {
                 houseNumber,
                 houseType,
                 houseAddress,
-                ownerName: owner._id // Using the ObjectId of the owner
+                owner: owner._id // Using the ObjectId of the owner
             });
         } else {
             // If ownerName is not available, create the house without any relationship
@@ -62,36 +62,31 @@ const addHouse = async (req, res) => {
     }
 };
 
-const getOwnerAndHouseDetails = async (req, res) => {
+const getHouseByOwner = async (req, res) => {
+    const ownerName = req.params.name;
+    console.log("Owner Name:", ownerName); // Add this line for logging
+
     try {
-        const name = req.params.name;
-
-        // Aggregate query to join Owner and House collections
-        const result = await ownerModel.aggregate([
-            {
-                $match: { ownerName: name } // Filter by ownerName
-            },
-            {
-                $lookup: {
-                    from: "houses", // Name of the House collection
-                    localField: "_id", // Field in the Owner collection
-                    foreignField: "owner", // Field in the House collection
-                    as: "houseDetails" // Alias for the joined documents
-                }
-            }
-        ]);
-
-        // Check if any result found
-        if (result.length === 0) {
+        const owner = await ownerModel.findOne({ ownerName });
+        if (!owner) {
             return res.status(404).json({ message: "Owner not found" });
         }
 
-        // Extract owner and house details from the result
-        const { _id, ownerName, houseDetails } = result[0];
+        // Fetch house information for the owner
+        const house = await houseModel.findOne({ owner: owner._id });
+        if (!house) {
+            return res.status(404).json({ message: "House not found for this owner" });
+        }
 
-        return res.status(200).json({ owner: { _id, ownerName }, houseDetails });
+        console.log("House found", house);
+        return res.status(200).json({
+            message: "House information found",
+            ownerName: owner.ownerName,
+            ownerID: owner._id,
+            house
+        });
     } catch (error) {
-        console.log("GetOwnerAndHouseDetails-controller error", error);
+        console.log("GetHouseByOwner-controller error", error);
         return res.status(500).json({ message: "Internal server error", error });
     }
 };
@@ -99,9 +94,4 @@ const getOwnerAndHouseDetails = async (req, res) => {
 
 
 
-
-
-
-
-
-module.exports = { addOwner, addHouse, getOwnerAndHouseDetails };
+module.exports = { addOwner, addHouse, getHouseByOwner };
