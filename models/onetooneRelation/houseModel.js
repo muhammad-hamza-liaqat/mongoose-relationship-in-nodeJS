@@ -12,6 +12,10 @@ const houseSchema = new mongoose.Schema({
     houseAddress:{
         type: String,
         required: true
+    },
+    ownerName:{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Owner"
     }
 });
 
